@@ -72,7 +72,7 @@ class PuLIDPipeline(nn.Module):
             name='antelopev2', root='.', providers=['CPUExecutionProvider']
         )
         self.app.prepare(ctx_id=0, det_size=(640, 640))
-        self.handler_ante = insightface.model_zoo.get_model('models/antelopev2/glintr100.onnx')
+        self.handler_ante = insightface.model_zoo.get_model('models/antelopev2/glintr100.onnx', providers=['CPUExecutionProvider'])
         self.handler_ante.prepare(ctx_id=0)
 
         gc.collect()
@@ -117,6 +117,8 @@ class PuLIDPipeline(nn.Module):
         self.debug_img_list = []
         image_bgr = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
         # get antelopev2 embedding
+        for k in self.app.models.keys():
+            self.app.models[k].session.set_providers(['CUDAExecutionProvider'])
         face_info = self.app.get(image_bgr)
         if len(face_info) > 0:
             face_info = sorted(face_info, key=lambda x: (x['bbox'][2] - x['bbox'][0]) * (x['bbox'][3] - x['bbox'][1]))[
@@ -142,6 +144,7 @@ class PuLIDPipeline(nn.Module):
         # incase insightface didn't detect face
         if id_ante_embedding is None:
             print('fail to detect face using insightface, extract embedding on align face')
+            self.handler_ante.session.set_providers(['CUDAExecutionProvider'])
             id_ante_embedding = self.handler_ante.get_feat(align_face)
 
         id_ante_embedding = torch.from_numpy(id_ante_embedding).to(self.device, self.weight_dtype)
