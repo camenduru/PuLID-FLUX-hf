@@ -86,6 +86,8 @@ def generate_image(
         id_embeddings = None
         uncond_id_embeddings = None
 
+    print(id_embeddings)
+
     # prepare input
     x = get_noise(
         1,
@@ -95,6 +97,7 @@ def generate_image(
         dtype=torch.bfloat16,
         seed=opts.seed,
     )
+    print(x)
     timesteps = get_schedule(
         opts.num_steps,
         x.shape[-1] * x.shape[-2] // 4,
