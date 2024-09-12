@@ -8,7 +8,9 @@ ftfy
 basicsr
 facexlib
 insightface
-onnxruntime-gpu
+onnx==1.13.1
+onnxruntime-gpu==1.10.0
+onnxruntime==1.14.1
 accelerate
 huggingface-hub
 timm
