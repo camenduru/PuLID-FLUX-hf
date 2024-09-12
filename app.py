@@ -24,125 +24,128 @@ def get_models(name: str, device: torch.device, offload: bool):
 
 
 class FluxGenerator:
-    def __init__(self, model_name: str, device: str, offload: bool, args):
-        self.device = torch.device(device)
-        self.offload = offload
-        self.model_name = model_name
+    def __init__(self):
+        self.device = torch.device('cuda')
+        self.offload = False
+        self.model_name = 'flux-dev'
         self.model, self.ae, self.t5, self.clip = get_models(
-            model_name,
+            self.model_name,
             device=self.device,
             offload=self.offload,
         )
-        self.pulid_model = PuLIDPipeline(self.model, device, weight_dtype=torch.bfloat16)
-        self.pulid_model.load_pretrain(args.pretrained_model)
+        self.pulid_model = PuLIDPipeline(self.model, 'cuda', weight_dtype=torch.bfloat16)
+        self.pulid_model.load_pretrain()
 
-    @spaces.GPU
-    def generate_image(
-            self,
-            width,
-            height,
-            num_steps,
-            start_step,
-            guidance,
-            seed,
-            prompt,
-            id_image=None,
-            id_weight=1.0,
-            neg_prompt="",
-            true_cfg=1.0,
-            timestep_to_start_cfg=1,
-            max_sequence_length=128,
-    ):
-        self.t5.max_length = max_sequence_length
 
-        seed = int(seed)
-        if seed == -1:
-            seed = None
+flux_generator = FluxGenerator()
 
-        opts = SamplingOptions(
-            prompt=prompt,
-            width=width,
-            height=height,
-            num_steps=num_steps,
-            guidance=guidance,
-            seed=seed,
-        )
 
-        if opts.seed is None:
-            opts.seed = torch.Generator(device="cpu").seed()
-        print(f"Generating '{opts.prompt}' with seed {opts.seed}")
-        t0 = time.perf_counter()
+@spaces.GPU
+def generate_image(
+        width,
+        height,
+        num_steps,
+        start_step,
+        guidance,
+        seed,
+        prompt,
+        id_image=None,
+        id_weight=1.0,
+        neg_prompt="",
+        true_cfg=1.0,
+        timestep_to_start_cfg=1,
+        max_sequence_length=128,
+):
+    flux_generator.t5.max_length = max_sequence_length
 
-        use_true_cfg = abs(true_cfg - 1.0) > 1e-2
+    seed = int(seed)
+    if seed == -1:
+        seed = None
 
-        if id_image is not None:
-            id_image = resize_numpy_image_long(id_image, 1024)
-            id_embeddings, uncond_id_embeddings = self.pulid_model.get_id_embedding(id_image, cal_uncond=use_true_cfg)
-        else:
-            id_embeddings = None
-            uncond_id_embeddings = None
+    opts = SamplingOptions(
+        prompt=prompt,
+        width=width,
+        height=height,
+        num_steps=num_steps,
+        guidance=guidance,
+        seed=seed,
+    )
 
-        # prepare input
-        x = get_noise(
-            1,
-            opts.height,
-            opts.width,
-            device=self.device,
-            dtype=torch.bfloat16,
-            seed=opts.seed,
-        )
-        timesteps = get_schedule(
-            opts.num_steps,
-            x.shape[-1] * x.shape[-2] // 4,
-            shift=True,
-        )
+    if opts.seed is None:
+        opts.seed = torch.Generator(device="cpu").seed()
+    print(f"Generating '{opts.prompt}' with seed {opts.seed}")
+    t0 = time.perf_counter()
 
-        if self.offload:
-            self.t5, self.clip = self.t5.to(self.device), self.clip.to(self.device)
-        inp = prepare(t5=self.t5, clip=self.clip, img=x, prompt=opts.prompt)
-        inp_neg = prepare(t5=self.t5, clip=self.clip, img=x, prompt=neg_prompt) if use_true_cfg else None
+    use_true_cfg = abs(true_cfg - 1.0) > 1e-2
 
-        # offload TEs to CPU, load model to gpu
-        if self.offload:
-            self.t5, self.clip = self.t5.cpu(), self.clip.cpu()
-            torch.cuda.empty_cache()
-            self.model = self.model.to(self.device)
+    if id_image is not None:
+        id_image = resize_numpy_image_long(id_image, 1024)
+        id_embeddings, uncond_id_embeddings = flux_generator.pulid_model.get_id_embedding(id_image, cal_uncond=use_true_cfg)
+    else:
+        id_embeddings = None
+        uncond_id_embeddings = None
 
-        # denoise initial noise
-        x = denoise(
-            self.model, **inp, timesteps=timesteps, guidance=opts.guidance, id=id_embeddings, id_weight=id_weight,
-            start_step=start_step, uncond_id=uncond_id_embeddings, true_cfg=true_cfg,
-            timestep_to_start_cfg=timestep_to_start_cfg,
-            neg_txt=inp_neg["txt"] if use_true_cfg else None,
-            neg_txt_ids=inp_neg["txt_ids"] if use_true_cfg else None,
-            neg_vec=inp_neg["vec"] if use_true_cfg else None,
-        )
+    # prepare input
+    x = get_noise(
+        1,
+        opts.height,
+        opts.width,
+        device=flux_generator.device,
+        dtype=torch.bfloat16,
+        seed=opts.seed,
+    )
+    timesteps = get_schedule(
+        opts.num_steps,
+        x.shape[-1] * x.shape[-2] // 4,
+        shift=True,
+    )
 
-        # offload model, load autoencoder to gpu
-        if self.offload:
-            self.model.cpu()
-            torch.cuda.empty_cache()
-            self.ae.decoder.to(x.device)
+    if flux_generator.offload:
+        flux_generator.t5, flux_generator.clip = flux_generator.t5.to(flux_generator.device), flux_generator.clip.to(flux_generator.device)
+    inp = prepare(t5=flux_generator.t5, clip=flux_generator.clip, img=x, prompt=opts.prompt)
+    inp_neg = prepare(t5=flux_generator.t5, clip=flux_generator.clip, img=x, prompt=neg_prompt) if use_true_cfg else None
 
-        # decode latents to pixel space
-        x = unpack(x.float(), opts.height, opts.width)
-        with torch.autocast(device_type=self.device.type, dtype=torch.bfloat16):
-            x = self.ae.decode(x)
+    # offload TEs to CPU, load model to gpu
+    if flux_generator.offload:
+        flux_generator.t5, flux_generator.clip = flux_generator.t5.cpu(), flux_generator.clip.cpu()
+        torch.cuda.empty_cache()
+        flux_generator.model = flux_generator.model.to(flux_generator.device)
 
-        if self.offload:
-            self.ae.decoder.cpu()
-            torch.cuda.empty_cache()
+    # denoise initial noise
+    x = denoise(
+        flux_generator.model, **inp, timesteps=timesteps, guidance=opts.guidance, id=id_embeddings, id_weight=id_weight,
+        start_step=start_step, uncond_id=uncond_id_embeddings, true_cfg=true_cfg,
+        timestep_to_start_cfg=timestep_to_start_cfg,
+        neg_txt=inp_neg["txt"] if use_true_cfg else None,
+        neg_txt_ids=inp_neg["txt_ids"] if use_true_cfg else None,
+        neg_vec=inp_neg["vec"] if use_true_cfg else None,
+    )
 
-        t1 = time.perf_counter()
+    # offload model, load autoencoder to gpu
+    if flux_generator.offload:
+        flux_generator.model.cpu()
+        torch.cuda.empty_cache()
+        flux_generator.ae.decoder.to(x.device)
 
-        print(f"Done in {t1 - t0:.1f}s.")
-        # bring into PIL format
-        x = x.clamp(-1, 1)
-        # x = embed_watermark(x.float())
-        x = rearrange(x[0], "c h w -> h w c")
+    # decode latents to pixel space
+    x = unpack(x.float(), opts.height, opts.width)
+    with torch.autocast(device_type=flux_generator.device.type, dtype=torch.bfloat16):
+        x = flux_generator.ae.decode(x)
 
-        img = Image.fromarray((127.5 * (x + 1.0)).cpu().byte().numpy())
-        return img, str(opts.seed), self.pulid_model.debug_img_list
+    if flux_generator.offload:
+        flux_generator.ae.decoder.cpu()
+        torch.cuda.empty_cache()
+
+    t1 = time.perf_counter()
+
+    print(f"Done in {t1 - t0:.1f}s.")
+    # bring into PIL format
+    x = x.clamp(-1, 1)
+    # x = embed_watermark(x.float())
+    x = rearrange(x[0], "c h w -> h w c")
+
+    img = Image.fromarray((127.5 * (x + 1.0)).cpu().byte().numpy())
+    return img, str(opts.seed), flux_generator.pulid_model.debug_img_list
 
 _HEADER_ = '''
 <div style="text-align: center; max-width: 650px; margin: 0 auto;">
@@ -169,8 +172,6 @@ If you have any questions or feedbacks, feel free to open a discussion or contac
 
 def create_demo(args, model_name: str, device: str = "cuda" if torch.cuda.is_available() else "cpu",
                 offload: bool = False):
-    generator = FluxGenerator(model_name, device, offload, args)
-
     with gr.Blocks() as demo:
         gr.Markdown(_HEADER_)
 
@@ -267,7 +268,7 @@ def create_demo(args, model_name: str, device: str = "cuda" if torch.cuda.is_ava
                             label='true CFG')
 
         generate_btn.click(
-            fn=generator.generate_image,
+            fn=generate_image,
             inputs=[width, height, num_steps, start_step, guidance, seed, prompt, id_image, id_weight, neg_prompt,
                     true_cfg, timestep_to_start_cfg, max_sequence_length],
             outputs=[output_image, seed_output, intermediate_output],
@@ -282,7 +283,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="PuLID for FLUX.1-dev")
     parser.add_argument("--name", type=str, default="flux-dev", choices=list('flux-dev'),
                         help="currently only support flux-dev")
-    parser.add_argument("--device", type=str, default="cuda", help="Device to use")
+    parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu",
+                        help="Device to use")
     parser.add_argument("--offload", action="store_true", help="Offload model to CPU when not in use")
     parser.add_argument("--port", type=int, default=8080, help="Port to use")
     parser.add_argument("--dev", action='store_true', help="Development mode")
