@@ -55,6 +55,7 @@ class PuLIDPipeline(nn.Module):
         )
         self.face_helper.face_parse = None
         self.face_helper.face_parse = init_parsing_model(model_name='bisenet', device=self.device)
+        self.face_helper = self.face_helper.to(self.device)
         # clip-vit backbone
         model, _, _ = create_model_and_transforms('EVA02-CLIP-L-14-336', 'eva_clip', force_custom_clip=True)
         model = model.visual
