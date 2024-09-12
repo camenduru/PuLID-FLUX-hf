@@ -13,7 +13,6 @@ from transformers import pipeline
 from flux.sampling import denoise, get_noise, get_schedule, prepare, unpack
 from flux.util import (
     configs,
-    embed_watermark,
     load_ae,
     load_clip,
     load_flow_model,
@@ -228,7 +227,7 @@ def main(
         print(f"Done in {t1 - t0:.1f}s. Saving {fn}")
         # bring into PIL format and save
         x = x.clamp(-1, 1)
-        x = embed_watermark(x.float())
+        # x = embed_watermark(x.float())
         x = rearrange(x[0], "c h w -> h w c")
 
         img = Image.fromarray((127.5 * (x + 1.0)).cpu().byte().numpy())
