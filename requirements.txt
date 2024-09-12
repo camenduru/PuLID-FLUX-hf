@@ -1,5 +1,5 @@
 diffusers==0.25.0
-torch==2.0.1
+torch==2.1.0
 torchvision==0.15.2
 transformers==4.43.3
 opencv-python
