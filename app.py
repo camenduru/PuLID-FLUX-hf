@@ -37,7 +37,6 @@ class FluxGenerator:
         self.pulid_model.load_pretrain(args.pretrained_model)
 
     @spaces.GPU
-    @torch.inference_mode()
     def generate_image(
             self,
             width,
