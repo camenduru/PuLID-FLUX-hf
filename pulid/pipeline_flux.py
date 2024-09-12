@@ -44,6 +44,7 @@ class PuLIDPipeline(nn.Module):
 
         # preprocessors
         # face align and parsing
+        print('pipeline init: ', self.device)
         self.face_helper = FaceRestoreHelper(
             upscale_factor=1,
             face_size=512,
@@ -135,6 +136,8 @@ class PuLIDPipeline(nn.Module):
 
         # using facexlib to detect and align face
         self.face_helper.read_image(image_bgr)
+        print('face_det_device: ', self.face_helper.face_det.device)
+        print('face_det_mean_tensor_device: ', self.face_helper.face_det.mean_tensor.device)
         self.face_helper.get_face_landmarks_5(only_center_face=True)
         self.face_helper.align_warp_face()
         if len(self.face_helper.cropped_faces) == 0:
