@@ -112,7 +112,6 @@ class PuLIDPipeline(nn.Module):
         x = x.repeat(1, 3, 1, 1)
         return x
 
-    @torch.no_grad()
     def get_id_embedding(self, image, cal_uncond=False):
         """
         Args:
