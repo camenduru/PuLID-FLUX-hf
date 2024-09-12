@@ -283,8 +283,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="PuLID for FLUX.1-dev")
     parser.add_argument("--name", type=str, default="flux-dev", choices=list('flux-dev'),
                         help="currently only support flux-dev")
-    parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu",
-                        help="Device to use")
+    parser.add_argument("--device", type=str, default="cuda", help="Device to use")
     parser.add_argument("--offload", action="store_true", help="Offload model to CPU when not in use")
     parser.add_argument("--port", type=int, default=8080, help="Port to use")
     parser.add_argument("--dev", action='store_true', help="Development mode")
