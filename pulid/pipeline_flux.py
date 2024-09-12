@@ -44,7 +44,6 @@ class PuLIDPipeline(nn.Module):
 
         # preprocessors
         # face align and parsing
-        print('pipeline init: ', self.device)
         self.face_helper = FaceRestoreHelper(
             upscale_factor=1,
             face_size=512,
@@ -55,9 +54,6 @@ class PuLIDPipeline(nn.Module):
         )
         self.face_helper.face_parse = None
         self.face_helper.face_parse = init_parsing_model(model_name='bisenet', device=self.device)
-        self.face_helper.face_parse = self.face_helper.face_parse.to(self.device)
-        self.face_helper.face_det = self.face_helper.face_det.to(self.device)
-        self.face_helper.face_det.body = self.face_helper.face_det.body.to(self.device)
         # clip-vit backbone
         model, _, _ = create_model_and_transforms('EVA02-CLIP-L-14-336', 'eva_clip', force_custom_clip=True)
         model = model.visual
@@ -138,9 +134,6 @@ class PuLIDPipeline(nn.Module):
 
         # using facexlib to detect and align face
         self.face_helper.read_image(image_bgr)
-        print('face_det_device: ', self.face_helper.face_det.device)
-        print('face_det_mean_tensor_device: ', self.face_helper.face_det.mean_tensor.device)
-        self.face_helper.face_det.mean_tensor = self.face_helper.face_det.mean_tensor.to(self.device)
         self.face_helper.get_face_landmarks_5(only_center_face=True)
         self.face_helper.align_warp_face()
         if len(self.face_helper.cropped_faces) == 0:
