@@ -106,7 +106,7 @@ def load_flow_model(name: str, device: str = "cuda", hf_download: bool = True):
     print("Init model")
     ckpt_path = configs[name].ckpt_path
     if (
-        ckpt_path is None
+        not os.path.exists(ckpt_path)
         and configs[name].repo_id is not None
         and configs[name].repo_flow is not None
         and hf_download
@@ -137,7 +137,7 @@ def load_clip(device: str = "cuda") -> HFEmbedder:
 def load_ae(name: str, device: str = "cuda", hf_download: bool = True) -> AutoEncoder:
     ckpt_path = configs[name].ae_path
     if (
-        ckpt_path is None
+        not os.path.exists(ckpt_path)
         and configs[name].repo_id is not None
         and configs[name].repo_ae is not None
         and hf_download
