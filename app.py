@@ -26,7 +26,7 @@ def get_models(name: str, device: torch.device, offload: bool):
 class FluxGenerator:
     def __init__(self):
         self.device = torch.device('cuda')
-        self.offload = True
+        self.offload = False
         self.model_name = 'flux-dev'
         self.model, self.ae, self.t5, self.clip = get_models(
             self.model_name,
