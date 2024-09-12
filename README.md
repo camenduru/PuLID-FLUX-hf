@@ -1,6 +1,6 @@
 ---
-title: PuLID FLUX
-emoji: 👁
+title: PuLID-FLUX
+emoji: 🤗
 colorFrom: blue
 colorTo: indigo
 sdk: gradio
