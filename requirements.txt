@@ -10,7 +10,6 @@ facexlib
 insightface
 onnxruntime-gpu
 accelerate
-spaces==0.19.4
 huggingface-hub
 timm
 SentencePiece
