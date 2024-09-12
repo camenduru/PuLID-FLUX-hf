@@ -9,7 +9,7 @@ basicsr
 facexlib
 insightface
 onnx==1.13.1
-onnxruntime-gpu==1.10.0
+onnxruntime-gpu
 onnxruntime==1.14.1
 accelerate
 huggingface-hub
