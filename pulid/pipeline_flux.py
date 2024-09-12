@@ -138,7 +138,7 @@ class PuLIDPipeline(nn.Module):
         self.face_helper.read_image(image_bgr)
         print('face_det_device: ', self.face_helper.face_det.device)
         print('face_det_mean_tensor_device: ', self.face_helper.face_det.mean_tensor.device)
-        self.face_helper.face_det.mean_tensor.to(self.device)
+        self.face_helper.face_det.mean_tensor = self.face_helper.face_det.mean_tensor.to(self.device)
         self.face_helper.get_face_landmarks_5(only_center_face=True)
         self.face_helper.align_warp_face()
         if len(self.face_helper.cropped_faces) == 0:
