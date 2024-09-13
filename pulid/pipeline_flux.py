@@ -67,12 +67,12 @@ class PuLIDPipeline(nn.Module):
         self.eva_transform_mean = eva_transform_mean
         self.eva_transform_std = eva_transform_std
         # antelopev2
-        snapshot_download('DIAMONIK7777/antelopev2', local_dir='models/antelopev2')
+        # snapshot_download('DIAMONIK7777/antelopev2', local_dir='models/antelopev2')
         self.app = FaceAnalysis(
             name='antelopev2', root='.', providers=['CPUExecutionProvider']
         )
         self.app.prepare(ctx_id=0, det_size=(640, 640))
-        self.handler_ante = insightface.model_zoo.get_model('models/antelopev2/glintr100.onnx', providers=['CPUExecutionProvider'])
+        self.handler_ante = insightface.model_zoo.get_model('/content/PuLID-FLUX/models/antelopev2/glintr100.onnx', providers=['CPUExecutionProvider'])
         self.handler_ante.prepare(ctx_id=0)
 
         gc.collect()
@@ -84,8 +84,8 @@ class PuLIDPipeline(nn.Module):
         self.debug_img_list = []
 
     def load_pretrain(self, pretrain_path=None):
-        hf_hub_download('guozinan/PuLID', 'pulid_flux_v0.9.0.safetensors', local_dir='models')
-        ckpt_path = 'models/pulid_flux_v0.9.0.safetensors'
+        # hf_hub_download('guozinan/PuLID', 'pulid_flux_v0.9.0.safetensors', local_dir='models')
+        ckpt_path = '/content/PuLID-FLUX/models/pulid_flux_v0.9.0.safetensors'
         if pretrain_path is not None:
             ckpt_path = pretrain_path
         state_dict = load_file(ckpt_path)

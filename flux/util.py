@@ -25,8 +25,8 @@ class ModelSpec:
 configs = {
     "flux-dev": ModelSpec(
         repo_id="camenduru/FLUX.1-dev",
-        repo_flow="flux1-dev-fp8.safetensors",
-        repo_ae="ae.safetensors",
+        repo_flow="flux1-dev.sft",
+        repo_ae="ae.sft",
         ckpt_path='models/flux1-dev.safetensors',
         params=FluxParams(
             in_channels=64,
@@ -127,11 +127,11 @@ def load_flow_model(name: str, device: str = "cuda", hf_download: bool = True):
 
 def load_t5(device: str = "cuda", max_length: int = 512) -> HFEmbedder:
     # max length 64, 128, 256 and 512 should work (if your sequence is short enough)
-    return HFEmbedder("xlabs-ai/xflux_text_encoders", max_length=max_length, torch_dtype=torch.bfloat16).to(device)
+    return HFEmbedder("/content/PuLID-FLUX/models/xflux_text_encoders", max_length=max_length, torch_dtype=torch.bfloat16).to(device)
 
 
 def load_clip(device: str = "cuda") -> HFEmbedder:
-    return HFEmbedder("openai/clip-vit-large-patch14", max_length=77, torch_dtype=torch.bfloat16).to(device)
+    return HFEmbedder("/content/PuLID-FLUX/models/clip-vit-large-patch14", max_length=77, torch_dtype=torch.bfloat16).to(device)
 
 
 def load_ae(name: str, device: str = "cuda", hf_download: bool = True) -> AutoEncoder:
