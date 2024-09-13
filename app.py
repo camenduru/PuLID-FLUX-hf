@@ -1,4 +1,3 @@
-import spaces
 import time
 import os
 
@@ -39,8 +38,6 @@ class FluxGenerator:
 
 flux_generator = FluxGenerator()
 
-
-@spaces.GPU
 @torch.inference_mode()
 def generate_image(
         width,
@@ -298,4 +295,4 @@ if __name__ == "__main__":
     huggingface_hub.login(os.getenv('HF_TOKEN'))
 
     demo = create_demo(args, args.name, args.device, args.offload)
-    demo.launch()
+    demo.launch(share=True)
