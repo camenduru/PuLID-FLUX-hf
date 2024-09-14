@@ -286,13 +286,10 @@ if __name__ == "__main__":
     parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu",
                         help="Device to use")
     parser.add_argument("--offload", action="store_true", help="Offload model to CPU when not in use")
-    parser.add_argument("--port", type=int, default=8080, help="Port to use")
+    parser.add_argument("--port", type=int, default=7860, help="Port to use")
     parser.add_argument("--dev", action='store_true', help="Development mode")
     parser.add_argument("--pretrained_model", type=str, help='for development')
     args = parser.parse_args()
-
-    import huggingface_hub
-    huggingface_hub.login(os.getenv('HF_TOKEN'))
 
     demo = create_demo(args, args.name, args.device, args.offload)
     demo.launch(share=True)
